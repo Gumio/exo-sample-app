@@ -17,6 +17,7 @@ import android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 import android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
 import android.view.View.SYSTEM_UI_FLAG_LOW_PROFILE
 import android.annotation.SuppressLint
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 
 
 class MainActivity : AppCompatActivity() {
@@ -35,8 +36,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayer() {
-        val uri = Uri.parse(getString(R.string.media_url_mp4))
-        val mediaSource = buildMediaSource(uri)
+        val mediaSource = buildMediaSource()
 
         mediaPlayer = SimpleExoPlayer.Builder(this).build().apply {
             playWhenReady = playWhenReady
@@ -47,9 +47,26 @@ class MainActivity : AppCompatActivity() {
         playerView.player = mediaPlayer
     }
 
-    private fun buildMediaSource(uri: Uri): MediaSource {
+    private fun buildMediaSource(): MediaSource {
         val dataSourceFactory = DefaultDataSourceFactory(this, "exoplayer-sample-app")
-        return ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri)
+        val uri = listOf<Uri>(
+            Uri.parse(getString(R.string.media_url_mp4)),
+            Uri.parse(getString(R.string.google_sample_url)),
+            Uri.parse(getString(R.string.media_url_mp4)),
+            Uri.parse(getString(R.string.google_sample_url)),
+            Uri.parse(getString(R.string.media_url_mp4)),
+            Uri.parse(getString(R.string.google_sample_url))
+        )
+
+        val mediaSourceList = mutableListOf<MediaSource>().apply {
+            uri.forEach {
+                val mediaSource =
+                    ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(it)
+                add(mediaSource)
+            }
+        }
+
+        return ConcatenatingMediaSource(*mediaSourceList.toTypedArray())
     }
 
     override fun onResume() {
