@@ -15,13 +15,15 @@ import android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 import android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
 import android.view.View.SYSTEM_UI_FLAG_LOW_PROFILE
 import android.annotation.SuppressLint
+import android.util.Log
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import kotlin.random.Random
-
 
 class MainActivity : AppCompatActivity() {
+
+    private val TAG = MainActivity::class.java.name
 
     private var playWhenReady = true
     private var currentWindow = 0
@@ -29,6 +31,29 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var playerView: PlayerView
     private var mediaPlayer: SimpleExoPlayer? = null
+
+    private val playerEventListener = object : Player.EventListener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            val state = if (isPlaying) "STATE_PLAYING" else "STATE_NOT_PLAYING"
+            Log.d(TAG, "isPlayingChanged: $state")
+        }
+
+        override fun onPlayerError(error: ExoPlaybackException) {
+            Log.d(TAG, "Error: ${error.message ?: ""}")
+        }
+
+        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+            val stateStr = when(playbackState) {
+                SimpleExoPlayer.STATE_IDLE -> "STATE_IDLE"
+                SimpleExoPlayer.STATE_BUFFERING -> "STATE_BUFFERING"
+                SimpleExoPlayer.STATE_READY -> "STATE_READY"
+                SimpleExoPlayer.STATE_ENDED ->  "STATE_ENDED"
+                else -> "UNKNOWN"
+            }
+
+            Log.d(TAG, "state is $stateStr, playWhenReady is $playWhenReady")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +73,7 @@ class MainActivity : AppCompatActivity() {
             .apply {
                 playWhenReady = playWhenReady
                 seekTo(currentWindow, playbackPosition)
+                addListener(playerEventListener)
                 prepare(mediaSource, false, false)
             }
 
@@ -84,6 +110,7 @@ class MainActivity : AppCompatActivity() {
             playWhenReady = it.playWhenReady
             playbackPosition = it.currentPosition
             currentWindow = it.currentWindowIndex
+            it.removeListener(playerEventListener)
             it.release()
             mediaPlayer = null
         }
